@@ -1,0 +1,210 @@
+
+<div class="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
+  <!-- Header -->
+  <header class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+    <div class="flex items-center gap-4">
+      <!-- Custom X Logo -->
+      <div class="grid grid-cols-5 gap-0.5 w-10 h-10">
+        <div class="bg-slate-100"></div><div></div><div></div><div></div><div class="bg-slate-100"></div>
+        <div></div><div class="bg-slate-100"></div><div></div><div class="bg-slate-100"></div><div></div>
+        <div></div><div></div><div class="bg-slate-100"></div><div></div><div></div>
+        <div></div><div class="bg-slate-100"></div><div></div><div class="bg-slate-100"></div><div></div>
+        <div class="bg-slate-100"></div><div></div><div></div><div></div><div class="bg-slate-100"></div>
+      </div>
+      <h1 class="text-3xl font-bold tracking-tight text-white">XCHESS</h1>
+    </div>
+
+    <!-- User Actions -->
+    <div class="flex items-center gap-3">
+       <button (click)="openLeaderboard()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 rounded-lg text-xs font-bold uppercase tracking-wider text-yellow-500 border border-slate-800 transition-colors">
+         🏆 Лидеры
+       </button>
+
+       @if (currentUser().name === 'Гость') {
+          <button (click)="openAuth()" class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-lg">
+            Вход / Регистрация
+          </button>
+       } @else {
+          <div class="flex items-center bg-slate-900 rounded-lg border border-slate-800 p-1">
+             <div class="px-3 flex items-center gap-2">
+               <span class="text-xs font-bold text-white">{{ currentUser().name }}</span>
+               <span class="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-[10px] font-mono">{{ currentUser().wins }} WIN</span>
+             </div>
+             <button (click)="logout()" class="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded transition-colors" title="Выйти">
+                ✕
+             </button>
+          </div>
+       }
+    </div>
+    
+    <div class="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-900 rounded-full border border-slate-800 shadow-lg">
+      <div class="w-2 h-2 rounded-full" [class.bg-green-500]="!isThinking()" [class.bg-yellow-500]="isThinking()" [class.animate-pulse]="isThinking()"></div>
+      <span class="text-xs font-mono uppercase tracking-wider">
+        @if (gameMode() === 'multiplayer') {
+          {{ isConnected() ? 'СЕТЬ: ОНЛАЙН' : 'СЕТЬ: ОЖИДАНИЕ' }}
+        } @else {
+          {{ isThinking() ? 'Gemini думает...' : 'Ваш ход' }}
+        }
+      </span>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    <!-- Left Column: Board -->
+    <div class="lg:col-span-7 xl:col-span-8 flex flex-col gap-4 relative">
+      <div class="bg-slate-900 p-2 md:p-6 rounded-2xl shadow-2xl border border-slate-800 relative overflow-hidden">
+        
+        <!-- P2P Connection Overlay -->
+        @if (isSearching() && gameMode() === 'multiplayer') {
+          <div class="absolute inset-0 z-50 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+            @if (!peerId()) {
+              <!-- Loading PeerJS -->
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+              <h2 class="text-xl font-bold">Подключение к сети P2P...</h2>
+            } @else {
+              <!-- Invite UI -->
+              <div class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mb-6">
+                 <span class="text-4xl">🔗</span>
+              </div>
+              <h2 class="text-2xl font-bold mb-2 text-white">Пригласите друга</h2>
+              <p class="text-slate-400 max-w-sm mb-6 text-sm">
+                Отправьте эту ссылку сопернику, чтобы начать реальную игру. Вы играете за Белых.
+              </p>
+              
+              <button (click)="copyLink()" class="flex items-center gap-2 px-6 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-95 mb-8 w-full max-w-xs justify-center">
+                <span>📋 Скопировать ссылку</span>
+              </button>
+
+              <div class="flex items-center gap-2 text-xs text-slate-500 font-mono">
+                <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                Ожидание подключения соперника...
+              </div>
+            }
+            
+            <button (click)="onModeChange('bot')" class="mt-8 text-slate-500 hover:text-slate-300 text-sm underline decoration-slate-700">
+              Вернуться к боту
+            </button>
+          </div>
+        }
+
+        <app-chess-board 
+          [isThinking]="isThinking()"
+          (moveMade)="onMove($event)">
+        </app-chess-board>
+      </div>
+
+      <!-- Mobile Status -->
+      <div class="lg:hidden bg-slate-900 p-4 rounded-xl border border-slate-800">
+        <div class="flex justify-between items-center mb-4">
+          <span class="font-bold">Ход: {{ turn() === 'w' ? 'Белые' : 'Черные' }}</span>
+          <span class="text-xs px-2 py-1 bg-blue-600 rounded">{{ gameMode() === 'bot' ? difficulty() : 'Сетевая' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Controls & History -->
+    <div class="lg:col-span-5 xl:col-span-4 flex flex-col gap-6">
+      <app-game-controls
+        [difficulty]="difficulty()"
+        [gameMode]="gameMode()"
+        [status]="gameStatus()"
+        [isThinking]="isThinking()"
+        (modeChange)="onModeChange($event)"
+        (difficultyChange)="onDifficultyChange($event)"
+        (reset)="onReset()">
+      </app-game-controls>
+
+      <app-move-history [history]="history()"></app-move-history>
+    </div>
+  </main>
+
+  <!-- Dialogs -->
+  
+  <!-- Leaderboard -->
+  <dialog #leaderboardDialog class="bg-slate-900 text-white rounded-2xl p-6 shadow-2xl border border-slate-700 w-full max-w-md backdrop:bg-slate-950/80">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-black uppercase tracking-widest text-yellow-500">Топ Игроков</h2>
+      <button (click)="closeLeaderboard()" class="text-slate-400 hover:text-white">✕</button>
+    </div>
+    
+    <div class="space-y-2 mb-6 max-h-[60vh] overflow-y-auto pr-2 scrollbar-hide">
+      @if (leaderboardData().length === 0) {
+        <div class="text-center py-8 text-slate-500">
+          <p class="mb-2">Список пуст</p>
+          <p class="text-xs">Станьте первым легендарным игроком!</p>
+        </div>
+      }
+
+      @for (player of leaderboardData(); track player.name; let idx = $index) {
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50 border border-white/5" [class.border-yellow-500]="player.name === currentUser().name">
+          <div class="flex items-center gap-3">
+            <span class="font-mono font-bold text-slate-500 w-6">#{{ idx + 1 }}</span>
+            <span class="font-bold truncate max-w-[140px]" [class.text-yellow-400]="player.name === currentUser().name">{{ player.name }}</span>
+          </div>
+          <span class="font-mono text-sm text-slate-300 whitespace-nowrap">{{ player.wins }} <span class="text-[10px] text-slate-500">WIN</span></span>
+        </div>
+      }
+    </div>
+    
+    @if(currentUser().name === 'Гость') {
+      <div class="text-center p-4 bg-blue-500/10 rounded-xl border border-blue-500/30">
+        <p class="text-xs text-blue-200 mb-2">Войдите в аккаунт, чтобы попасть в топ!</p>
+        <button (click)="closeLeaderboard(); openAuth()" class="text-xs font-bold bg-blue-600 px-3 py-1.5 rounded hover:bg-blue-500">Вход / Регистрация</button>
+      </div>
+    }
+  </dialog>
+
+  <!-- Auth Dialog -->
+  <dialog #authDialog class="bg-slate-900 text-white rounded-2xl p-6 shadow-2xl border border-slate-700 w-full max-w-sm backdrop:bg-slate-950/80">
+    <div class="flex items-center justify-between mb-6">
+       <h2 class="text-xl font-black uppercase tracking-widest">{{ authMode() === 'login' ? 'Вход' : 'Регистрация' }}</h2>
+       <button (click)="closeAuth()" class="text-slate-500 hover:text-white">✕</button>
+    </div>
+
+    <div class="space-y-4">
+      @if(authError()) {
+        <div class="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-200 text-xs font-bold">
+          {{ authError() }}
+        </div>
+      }
+
+      <div class="space-y-1">
+        <label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Имя пользователя</label>
+        <input 
+          [(ngModel)]="authName" 
+          placeholder="User123" 
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 font-bold transition-colors"
+        >
+      </div>
+
+      <div class="space-y-1">
+        <label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Пароль</label>
+        <input 
+          [(ngModel)]="authPassword" 
+          type="password"
+          placeholder="••••••••" 
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500 font-bold transition-colors"
+        >
+      </div>
+
+      <button (click)="submitAuth()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold text-sm uppercase tracking-wide shadow-lg transition-transform active:scale-95">
+        {{ authMode() === 'login' ? 'Войти' : 'Создать аккаунт' }}
+      </button>
+
+      <div class="text-center">
+        <button (click)="toggleAuthMode()" class="text-xs text-slate-400 hover:text-white underline">
+          {{ authMode() === 'login' ? 'Нет аккаунта? Зарегистрироваться' : 'Есть аккаунт? Войти' }}
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <footer class="max-w-6xl mx-auto mt-12 pt-8 border-t border-slate-900 text-slate-500 text-sm flex flex-col md:flex-row justify-between items-center gap-4">
+    <p>© 2025 XChess AI. Poweres by Gemini 2.5 flash.</p>
+    <div class="flex gap-4">
+      <span class="hover:text-slate-300 transition-colors cursor-pointer">Правила</span>
+      <span class="hover:text-slate-300 transition-colors cursor-pointer">Об ИИ</span>
+      <span class="hover:text-slate-300 transition-colors cursor-pointer">Настройки</span>
+    </div>
+  </footer>
+</div>

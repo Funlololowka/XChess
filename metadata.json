@@ -1,0 +1,5 @@
+{
+  "name": "XChess ",
+  "description": "Премиальная шахматная платформа с искусственным интеллектом Gemini. Режимы игры с ботом и по сети.",
+  "requestFramePermissions": []
+}
