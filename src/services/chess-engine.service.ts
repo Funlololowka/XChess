@@ -8,7 +8,7 @@ declare var Peer: any;
 export interface Player {
   name: string;
   wins: number;
-  password?: string; // Сохраняем пароль
+  password?: string;
 }
 
 @Injectable({
@@ -16,7 +16,12 @@ export interface Player {
 })
 export class ChessEngineService {
   private game = new Chess();
-  private ai = new GoogleGenAI({ apiKey: (process.env as any).API_KEY });
+  
+  // ВАЖНО: Вставьте сюда свой ключ от Google Gemini API
+  // Получить ключ можно здесь: https://aistudio.google.com/app/apikey
+  private readonly API_KEY = 'AIzaSyCna3--Z_ueY8fVZn5OgoYcVvYsiSrcwCc'; 
+
+  private ai: GoogleGenAI;
   
   // Timers
   private aiTimeout: any = null;
@@ -44,6 +49,12 @@ export class ChessEngineService {
   allUsers = signal<Player[]>([]);
 
   constructor() {
+    // Инициализация AI с проверкой ключа
+    if (this.API_KEY === 'ВСТАВЬТЕ_СЮДА_ВАШ_КЛЮЧ_GEMINI') {
+      console.error('ОШИБКА: Вы не вставили API KEY в src/services/chess-engine.service.ts');
+    }
+    this.ai = new GoogleGenAI({ apiKey: this.API_KEY });
+
     this.loadDatabase();
     this.restoreSession();
   }
@@ -426,3 +437,4 @@ export class ChessEngineService {
     this.isConnected.set(false);
   }
 }
+
